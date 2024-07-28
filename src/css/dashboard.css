@@ -1,0 +1,109 @@
+.gridContainer {
+  display: grid;
+  gap: 1rem;
+  justify-content: space-around;
+  padding: 2rem;
+  grid-auto-rows: 1fr;
+  grid-template-columns: repeat(auto-fill, max(200px, 100%/5));
+}
+
+.appBarContainer {
+  display: flex;
+}
+
+.dottedOutline {
+  outline-color: deeppink;
+  outline-style: dotted;
+  height: 100px;
+  display: flex;
+  align-items: center;
+  padding: 1rem;
+  margin: 0.5rem;
+  margin-top: 1rem;
+}
+
+.dottedGreen {
+  outline-color: dodgerblue;
+}
+
+.dottedDisabled {
+  outline-color: gray;
+  background-color: gray;
+  opacity: 0.5;
+}
+
+.appBarLanguageDiv {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  margin-left: 1rem;
+}
+
+.missionDialogPanels {
+  display: flex;
+  gap: 1rem;
+}
+
+.missionDialogPanels > * {
+  flex-grow: 1;
+  flex-basis: 0;
+}
+
+.missionDialogLayout {
+  display: grid;
+  grid-template-columns: 0.1fr 1fr;
+  align-items: baseline;
+  align-content: center;
+  height: 100%;
+  gap: 1rem;
+}
+
+.missionDialogLayout > * {
+  margin: 0 !important;
+}
+
+.missionDialogDropBox {
+  outline-color: deeppink;
+  outline-style: dotted;
+  height: 100px;
+  display: flex;
+  align-items: center;
+  padding: 1rem;
+  margin: 0.5rem;
+  margin-top: 1rem;
+  margin-bottom: 1rem;
+}
+
+.missionDialogDisabled {
+  pointer-events: none;
+  opacity: 0.25;
+}
+
+.dottedBlue {
+  outline-color: dodgerblue;
+  outline-style: solid;
+}
+
+.spacer {
+  margin: 0.5rem;
+}
+
+.spacer1 {
+  margin: 1rem;
+}
+
+.missingAdornment {
+  border: 1px solid darkred;
+  padding: 0.5rem;
+  border-radius: 5px;
+  background-color: rgba(255, 0, 0, 0.1);
+}
+
+.versionDiv {
+  position: sticky;
+  bottom: 0;
+  width: 100%;
+  text-align: right;
+	padding-right: 1rem;
+	opacity: .5;
+}
