@@ -40,11 +40,6 @@ export default [
     navTo: "enemyinstructions",
   },
   {
-    label: "tutorials",
-    filetypes: "tutorial01.json, tutorial02.json, etc",
-    navTo: "",
-  },
-  {
     label: "deployment card text",
     filetypes: "allies.json, enemies.json, etc",
     navTo: "deploymentcard",
