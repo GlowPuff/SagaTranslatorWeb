@@ -8,26 +8,28 @@ import { Link, useNavigate } from "react-router-dom";
 function App() {
   const navigate = useNavigate();
 
-  const projects = projectSchema.map((item, idx) => (
-    <Button
-      key={idx}
-      variant="dashboardButton"
-      component={Link}
-      to={item.navTo}
-    >
-      <Typography variant="button" mb={1} mt={1}>
-        {item.label}
-      </Typography>
-      <Typography
-        variant="caption"
-        color="text.secondary"
-        align="center"
-        mb={1}
+  const projects = projectSchema
+    .sort((a, b) => (a.label < b.label ? -1 : 1))
+    .map((item, idx) => (
+      <Button
+        key={idx}
+        variant="dashboardButton"
+        component={Link}
+        to={item.navTo}
       >
-        {item.filetypes}
-      </Typography>
-    </Button>
-  ));
+        <Typography variant="button" mb={1} mt={1}>
+          {item.label}
+        </Typography>
+        <Typography
+          variant="caption"
+          color="text.secondary"
+          align="center"
+          mb={1}
+        >
+          {item.filetypes}
+        </Typography>
+      </Button>
+    ));
 
   projects.push(
     <Button
@@ -76,7 +78,7 @@ function App() {
     >
       <div className="gridContainer">{projects}</div>
 
-			<div className="versionDiv">Version 1.0</div>
+      <div className="versionDiv">Version 1.0</div>
 
       <Alert
         severity="info"

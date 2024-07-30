@@ -1,6 +1,6 @@
 export default [
   {
-    label: "User Interface",
+    label: "user interface",
     filetypes: "ui.json",
     navTo: "userinterface",
   },
