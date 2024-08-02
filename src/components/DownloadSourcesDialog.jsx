@@ -106,7 +106,7 @@ export default function DownloadSourcesDialog() {
             />
 
             <Typography color={"orange"}>
-              Downloading the Translation will replace your Translation with the latest data from the language you select below.
+              Downloading the Translation will replace your Translation with the latest data from the language you select below, if it exists.
             </Typography>
 
             <div
