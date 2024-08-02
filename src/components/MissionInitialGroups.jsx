@@ -24,8 +24,8 @@ export default function MissionInitialGroups({
           <Typography>Initial Group - {groupItem.cardName}</Typography>
         </div>
       ) : (
-        <div style={{ marginBottom: "1rem", color: "#6dcaf2" }}>
-          <Typography variant="button">Source</Typography>
+        <div style={{ marginBottom: "1rem"}}>
+          <Typography>Source</Typography>
         </div>
       )}
 

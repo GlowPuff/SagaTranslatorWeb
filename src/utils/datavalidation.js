@@ -278,7 +278,7 @@ function validateMission(source, translation) {
     }
   });
 
-  console.log("🚀 ~ validateMission ~ fixed:", fixed);
+  //console.log("🚀 ~ validateMission ~ fixed:", fixed);
 
   return [broken, fixed, markRed];
 }

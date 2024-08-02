@@ -31,14 +31,16 @@ export default function MissionEntity({
           style={{
             marginBottom: "1rem",
             color:
-              !disabled && brokenIDs.includes(entityItem.GUID) ? "red" : "white",
+              !disabled && brokenIDs.includes(entityItem.GUID)
+                ? "red"
+                : "white",
           }}
         >
           <Typography>Map Entity - {entityItem.entityName}</Typography>
         </div>
       ) : (
-        <div style={{ marginBottom: "1rem", color: "#6dcaf2" }}>
-          <Typography variant="button">Source</Typography>
+        <div style={{ marginBottom: "1rem" }}>
+          <Typography>Source</Typography>
         </div>
       )}
 

@@ -1,6 +1,6 @@
 //mui
 import { Typography } from "@mui/material";
-import { saveFile, createHelpOverlayList } from "../utils/core";
+import { saveFile, createHelpOverlayList, downloadSource } from "../utils/core";
 import { fixHelpOverlay } from "../utils/datavalidation";
 //libraries
 import { jsonrepair } from "jsonrepair";
@@ -55,6 +55,7 @@ export default function HelpOverlay() {
   //selected translated item in the tree
   const [selectedTranslatedItem, setSelectedTranslatedItem] = useState(null);
   const [disableSaveButton, setDisableSaveButton] = useState(false);
+  const [busy, setBusy] = useState(false);
 
   const handleItemSelectionToggle = (event, itemId, isSelected) => {
     if (isSelected) {
@@ -123,6 +124,64 @@ export default function HelpOverlay() {
     exportedData[helpIndex].helpItems[itemIndex].helpText = value;
   }
 
+  async function doWork({ language, task }) {
+    setSelectedSourceItem(null);
+    setSelectedTranslatedItem(null);
+    CommonLayout.SelectTreeNone();
+    setBusy(true);
+
+    try {
+      let promises = [];
+      if (task.getSource) {
+        promises.push(
+          new Promise((resolve) => {
+            resolve(downloadSource("help", "English (EN)", true, ""));
+          })
+        );
+      }
+
+      if (task.getTranslation) {
+        promises.push(
+          new Promise((resolve) => {
+            resolve(downloadSource("help", language, true, ""));
+          })
+        );
+      }
+
+      let promise = await Promise.all(promises);
+
+      if (task.getSource && !task.getTranslation) {
+        //set the source
+        helpData = promise[0];
+        exportedData = JSON.parse(JSON.stringify(helpData));
+        //sort them
+        sortHelpData(exportedData);
+        sortHelpData(helpData);
+        //set the updated tree
+        sourceDataTreeList = createHelpOverlayList(helpData);
+      } else if (task.getSource && task.getTranslation) {
+        //set both
+        helpData = promise[0];
+        exportedData = promise[1];
+        //sort them
+        sortHelpData(exportedData);
+        sortHelpData(helpData);
+        //set the updated tree
+        sourceDataTreeList = createHelpOverlayList(helpData);
+      }
+
+      ToastMessage.showToast("Successfully downloaded the requested data.");
+    } catch (error) {
+      console.log("🚀 ~ onDownloadLatest ~ error:", error);
+      DialogBox.ShowGenericDialog(
+        "Downloading Error",
+        "There was an error trying to download the requested data: " + error
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <CommonLayout
       disableSaveButton={disableSaveButton}
@@ -131,6 +190,8 @@ export default function HelpOverlay() {
       handleItemSelectionToggle={handleItemSelectionToggle}
       projectTitle={"HELP OVERLAY"}
       onSave={onSaveFile}
+      onDownloadLatest={doWork}
+      isBusy={busy}
     >
       {/* TRANSLATED PANEL */}
       <div style={{ flexGrow: "1", marginRight: ".5rem" }}>

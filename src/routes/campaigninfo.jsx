@@ -1,14 +1,10 @@
-//mui
-import { ThemeProvider, createTheme } from "@mui/material/styles";
-import { RichTreeView } from "@mui/x-tree-view/RichTreeView";
-import { Drawer, Box, Toolbar, CssBaseline } from "@mui/material";
-import { saveFile, createTranslatorTheme } from "../utils/core";
+import { saveFile, downloadSource } from "../utils/core";
 //my components
 import ToastMessage from "../components/ToastMessage";
-import DragDropDiv from "../components/DragDropDiv";
-import ICAppBar from "../components/ICAppBar";
+import CommonLayout from "../components/CommonLayout";
 import MultilineTextInput from "../components/MultilineTextInput";
 import DialogBox from "../components/DialogBox";
+// import DialogBox from "../components/DialogBox";
 //react
 import { useState } from "react";
 //source data
@@ -30,153 +26,171 @@ let sourceTree = [
   { id: "5", label: "Jabba", data: jabbaData, filename: "JabbaInfo.txt" },
   { id: "6", label: "Lothal", data: lothalData, filename: "LothalInfo.txt" },
 ];
-const drawerWidth = 240;
 
 export default function CampaignInfo() {
-  const [translatedData, setTranslatedData] = useState(""); //the data that gets saved
   const [selectedSourceItem, setSelectedSourceItem] = useState({
     data: "",
     label: "None",
   });
-  const [selectedTranslatedItem, setSelectedTranslatedItem] = useState({
-    data: "",
-  });
-  const [selectedItems, setSelectedItems] = useState([]);
   const [disableSaveButton, setDisableSaveButton] = useState(true);
-
-  const darkTheme = createTheme(createTranslatorTheme);
+  const [busy, setBusy] = useState(false);
+  const [selectedKey, setSelectedKey] = useState("");
+  const [selectedIndex, setSelectedIndex] = useState(-1);
+  const [refresh, setRefresh] = useState("");
+  const [exportedData, setExportedData] = useState({
+    Core: sourceTree[0].data,
+    Twin: sourceTree[1].data,
+    Bespin: sourceTree[2].data,
+    Empire: sourceTree[3].data,
+    Hoth: sourceTree[4].data,
+    Jabba: sourceTree[5].data,
+    Lothal: sourceTree[6].data,
+  });
 
   const handleItemSelectionToggle = (event, itemId, isSelected) => {
     if (isSelected) {
+      setSelectedIndex(itemId);
+      setSelectedKey(sourceTree[itemId].label);
       setDisableSaveButton(false);
-      setTranslatedData(sourceTree[itemId].data);
       setSelectedSourceItem({
         ...sourceTree[itemId],
         rnd: Math.random().toString(),
       });
-      setSelectedTranslatedItem({
-        label: sourceTree[itemId].label,
-        data: sourceTree[itemId].data,
-        rnd: Math.random().toString(),
+      setExportedData({
+        ...exportedData,
       });
-    }
+      setRefresh(Date.now);
+    } else setSelectedIndex(-1);
   };
 
   function onFileDropped(fileInfo, fileContent) {
-    //console.log("🚀 ~ onFileDropped ~ fileContent:", fileContent);
-    //console.log("🚀 ~ onFileDropped ~ fileInfo:", fileInfo);
+    if (fileInfo.name != sourceTree[selectedIndex].filename) {
+      ToastMessage.showToast(
+        `The imported filename doesn't match the expected filename: ${sourceTree[selectedIndex].filename}`
+      );
+      return;
+    }
 
-    setSelectedTranslatedItem({
-      label: selectedSourceItem.label,
-      data: fileContent,
-      rnd: Math.random().toString(),
+    setExportedData({
+      ...exportedData,
+      [selectedKey]: fileContent,
     });
+    setRefresh(Date.now);
 
-    setTranslatedData(fileContent);
+    ToastMessage.showToast(`Data imported: ${fileInfo.name}`);
+  }
+
+  async function doWork({ language, task }) {
+    setBusy(true);
+
+    try {
+      let promises = [];
+      if (task.getSource) {
+        promises.push(
+          new Promise((resolve) => {
+            resolve(
+              downloadSource(
+                "campaigninfo",
+                "English (EN)",
+                false,
+                sourceTree[selectedIndex].filename
+              )
+            );
+          })
+        );
+      }
+
+      if (task.getTranslation) {
+        promises.push(
+          new Promise((resolve) => {
+            resolve(
+              downloadSource(
+                "campaigninfo",
+                language,
+                false,
+                sourceTree[selectedIndex].filename
+              )
+            );
+          })
+        );
+      }
+
+      let promise = await Promise.all(promises);
+
+      if (task.getSource && !task.getTranslation) {
+        setSelectedSourceItem({
+          ...sourceTree[selectedIndex],
+          data: promise[0],
+          rnd: Math.random().toString(),
+        });
+        sourceTree[selectedIndex].data = promise[0];
+      } else if (task.getSource && task.getTranslation) {
+        setSelectedSourceItem({
+          ...sourceTree[selectedIndex],
+          data: promise[0],
+        });
+        sourceTree[selectedIndex].data = promise[0];
+        setExportedData({
+          ...exportedData,
+          [selectedKey]: promise[1],
+        });
+      }
+
+      ToastMessage.showToast("Successfully downloaded the requested data.");
+    } catch (error) {
+      console.log("🚀 ~ onDownloadLatest ~ error:", error);
+      DialogBox.ShowGenericDialog(
+        "Downloading Error",
+        "There was an error trying to download the requested data: " + error
+      );
+    } finally {
+      setBusy(false);
+      setRefresh(Date.now);
+    }
   }
 
   return (
-    <ThemeProvider theme={darkTheme}>
-      <Box sx={{ display: "flex" }}>
-        <CssBaseline />
+    <CommonLayout
+      disableSaveButton={disableSaveButton}
+      onFileDropped={onFileDropped}
+      treeViewList={sourceTree}
+      handleItemSelectionToggle={handleItemSelectionToggle}
+      projectTitle={`CAMPAIGN INFO - ${selectedSourceItem.label}`}
+      dropDisabled={selectedKey === ""}
+      onSave={() =>
+        saveFile(exportedData[selectedKey], selectedSourceItem.filename, (m) =>
+          ToastMessage.showToast(m)
+        )
+      }
+      drawerWidth={340}
+      language={"English (EN)"}
+      onDownloadLatest={doWork}
+      isBusy={busy}
+    >
+      {/* TRANSLATED PANEL */}
+      <div style={{ flexGrow: "1", marginRight: ".5rem" }}>
+        {selectedIndex != -1 && (
+          <MultilineTextInput
+            key={refresh}
+            label={selectedKey}
+            dataText={exportedData[selectedKey]}
+            onTextChanged={(txt) => (exportedData[selectedKey] = txt)}
+            disabled={false}
+          />
+        )}
+      </div>
 
-        <ICAppBar
-          title={`CAMPAIGN INFO - ${selectedSourceItem.label}`}
-          includeLanguageSelector={false}
-          disableSaveButton={disableSaveButton}
-          onSave={() =>
-            saveFile(translatedData, selectedSourceItem.filename, (m) =>
-              ToastMessage.showToast(m)
-            )
-          }
-        />
-
-        <Drawer
-          open={true}
-          variant="permanent"
-          sx={{
-            position: "relative",
-            width: drawerWidth,
-            flexShrink: 0,
-            [`& .MuiDrawer-paper`]: {
-              width: drawerWidth,
-              boxSizing: "border-box",
-            },
-          }}
-        >
-          <Toolbar />
-
-          <Box
-            onDragOver={(ev) => ev.preventDefault()}
-            onDrop={(ev) => ev.preventDefault()}
-          >
-            <DragDropDiv
-              onFileDropped={onFileDropped}
-              disabled={selectedTranslatedItem.data.length === 0}
-            />
-
-            <RichTreeView
-              items={sourceTree}
-              onItemSelectionToggle={handleItemSelectionToggle}
-              selectedItems={selectedItems}
-              onSelectedItemsChange={(ev, ids) => setSelectedItems(ids)}
-            />
-          </Box>
-        </Drawer>
-
-        <Box
-          sx={{
-            flexGrow: 1,
-            height: "100vh",
-            overflow: "auto",
-          }}
-        >
-          <Toolbar />
-
-          {/* MAIN CONTENT */}
-          <Box
-            display={"flex"}
-            flexDirection={"row"}
-            justifyItems={"center"}
-            sx={{ mb: 10, mt: 2, marginLeft: "2rem", marginRight: "2rem" }}
-          >
-            {selectedTranslatedItem.data.length === 0 && (
-              <div
-                style={{ display: "grid", width: "100%", placeItems: "center" }}
-              >
-                <p>Select a Campaign.</p>
-              </div>
-            )}
-
-            {/* TRANSLATED PANEL */}
-            <div style={{ flexGrow: "1", marginRight: ".5rem" }}>
-              {selectedTranslatedItem.data.length > 0 && (
-                <MultilineTextInput
-                  key={selectedTranslatedItem.rnd}
-                  label={selectedTranslatedItem.label}
-                  dataText={selectedTranslatedItem.data}
-                  onTextChanged={(txt) => setTranslatedData(txt)}
-                  disabled={false}
-                />
-              )}
-            </div>
-            {/* ENGLISH SOURCE PANEL */}
-            <div style={{ flexGrow: "1", marginLeft: ".5rem" }}>
-              {selectedSourceItem.data.length > 0 && (
-                <MultilineTextInput
-                  key={selectedSourceItem.id}
-                  label={selectedSourceItem.label}
-                  dataText={selectedSourceItem.data}
-                  disabled={true}
-                />
-              )}
-            </div>
-          </Box>
-        </Box>
-      </Box>
-
-      <ToastMessage />
-      <DialogBox />
-    </ThemeProvider>
+      {/* ENGLISH SOURCE PANEL */}
+      <div style={{ flexGrow: "1", marginLeft: ".5rem" }}>
+        {selectedSourceItem.data.length > 0 && (
+          <MultilineTextInput
+            key={refresh}
+            label={selectedSourceItem.label}
+            dataText={selectedSourceItem.data}
+            disabled={true}
+          />
+        )}
+      </div>
+    </CommonLayout>
   );
 }

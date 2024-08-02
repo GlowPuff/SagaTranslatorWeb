@@ -23,12 +23,12 @@ export default function HelpItem({
   return (
     <>
       {title ? (
-        <div style={{ marginBottom: "1rem", color: "#6dcaf2" }}>
-          <Typography variant="button">{title}</Typography>
+        <div style={{ marginBottom: "1rem" }}>
+          <Typography >{title}</Typography>
         </div>
       ) : (
-        <div style={{ marginBottom: "1rem", color: "#6dcaf2" }}>
-          <Typography variant="button">&nbsp;</Typography>
+        <div style={{ marginBottom: "1rem" }}>
+          <Typography >Source</Typography>
         </div>
       )}
 

@@ -73,6 +73,17 @@ export default function EnemyGroup({
 
   return (
     <>
+      {disabled && (
+        <div style={{ marginBottom: "1rem" }}>
+          <Typography>Source</Typography>
+        </div>
+      )}
+      {!disabled && (
+        <div style={{ marginBottom: "1rem" }}>
+          <Typography>{groupName}</Typography>
+        </div>
+      )}
+
       <TextField
         label={"Name"}
         variant="filled"

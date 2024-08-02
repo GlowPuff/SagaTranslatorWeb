@@ -28,8 +28,8 @@ export default function MissionProps({
           <Typography>Mission Properties</Typography>
         </div>
       ) : (
-        <div style={{ marginBottom: "1rem", color: "#6dcaf2" }}>
-          <Typography variant="button">English Source</Typography>
+        <div style={{ marginBottom: "1rem" }}>
+          <Typography>Source</Typography>
         </div>
       )}
 

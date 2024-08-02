@@ -1,6 +1,6 @@
 import { useState } from "react";
 import PropTypes from "prop-types";
-import { TextField } from "@mui/material";
+import { TextField, Typography } from "@mui/material";
 
 export default function UICategory({ uiCategory, onItemUpdated, disabled }) {
   const [itemArray, setItemArray] = useState(uiCategory.items);
@@ -15,6 +15,17 @@ export default function UICategory({ uiCategory, onItemUpdated, disabled }) {
 
   return (
     <>
+      {disabled && (
+        <div style={{ marginBottom: "1rem" }}>
+          <Typography>Source</Typography>
+        </div>
+      )}
+      {!disabled && (
+        <div style={{ marginBottom: "1rem" }}>
+          <Typography>{uiCategory.category}</Typography>
+        </div>
+      )}
+
       {itemArray.map((item, index) => (
         <div key={index}>
           <TextField

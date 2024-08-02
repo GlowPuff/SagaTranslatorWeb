@@ -9,6 +9,7 @@ import {
   removeMissingPropertiesDeep,
   saveFile,
   createUIList,
+  downloadSource,
 } from "../utils/core";
 // import { fixUI } from "../utils/datavalidation";
 //my components
@@ -19,10 +20,12 @@ import DialogBox from "../components/DialogBox";
 //react
 import { useState } from "react";
 //source data
-import sourceData from "../translationdata/ui.json";
+import sourceDataRaw from "../translationdata/ui.json";
+import { jsonrepair } from "jsonrepair";
 
 //variables
 let selectedTreeIndex = -1;
+let sourceData = sourceDataRaw; //copy the import so it can be changed
 //sort the source data by property name
 sortData(sourceData);
 let sourceDataTreeList = createUIList(sourceData);
@@ -62,18 +65,30 @@ export default function UserInterface() {
   const [selectedTranslatedItem, setSelectedTranslatedItem] = useState(null);
   const [language, setLanguage] = useState("English (EN)");
   const [disableSaveButton, setDisableSaveButton] = useState(false);
+  const [busy, setBusy] = useState(false);
 
   function onFileDropped(fileInfo, fileContent) {
-    // console.log("🚀 ~ onFileDropped ~ fileContent:", fileContent);
-    // console.log("🚀 ~ onFileDropped ~ fileInfo:", fileInfo);
+    if (fileInfo.name != "ui.json") {
+      ToastMessage.showToast(
+        "The imported filename doesn't match the expected filename: ui.json"
+      );
+      return;
+    }
+
     setSelectedSourceItem(null);
     setSelectedTranslatedItem(null);
     setDisableSaveButton(true);
     CommonLayout.SelectTreeNone();
 
-    // importedFilename = fileInfo.name;
-    let importedData = JSON.parse(fileContent);
+    fixImport(JSON.parse(jsonrepair(fileContent)));
 
+    setLanguage(exportedData.languageID);
+    sortData(exportedData);
+    setDisableSaveButton(false);
+  }
+
+  //fix imported data, add missing props, report any errors, set exportedData
+  function fixImport(importedData) {
     //first, report any missing properties as array of strings
     const missingProperties = getMissingPropertiesDeep(
       sourceData,
@@ -92,12 +107,6 @@ export default function UserInterface() {
     if (removedProps.length > 0 || missingProperties.length > 0) {
       DialogBox.ReportUIErrors(missingProperties, removedProps);
     } else ToastMessage.showToast("Data imported, no errors found");
-
-    setLanguage(exportedData.languageID);
-    sortData(exportedData);
-    setDisableSaveButton(false);
-
-    //console.log("🚀 ~ onFileDropped ~ exportedData:", exportedData);
   }
 
   function setTargetLanguage(language) {
@@ -139,6 +148,61 @@ export default function UserInterface() {
     exportedData[category][item] = value;
   }
 
+  async function doWork({ language, task }) {
+    setSelectedSourceItem(null);
+    setSelectedTranslatedItem(null);
+    CommonLayout.SelectTreeNone();
+    setBusy(true);
+
+    try {
+      let promises = [];
+      if (task.getSource) {
+        promises.push(
+          new Promise((resolve) => {
+            resolve(downloadSource("ui", "English (EN)", true, ""));
+          })
+        );
+      }
+
+      if (task.getTranslation) {
+        promises.push(
+          new Promise((resolve) => {
+            resolve(downloadSource("ui", language, true, ""));
+          })
+        );
+      }
+
+      let promise = await Promise.all(promises);
+
+      if (task.getSource && !task.getTranslation) {
+        //set the source
+        sourceData = promise[0];
+        sortData(sourceData);
+        sourceDataTreeList = createUIList(sourceData);
+        exportedData = defaultsDeep(promise[0], sourceData);
+        setLanguage(exportedData.languageID);
+      } else if (task.getSource && task.getTranslation) {
+        //set both
+        sourceData = promise[0];
+        sortData(sourceData);
+        sourceDataTreeList = createUIList(sourceData);
+        fixImport(promise[1]);//this func also sets the 'exportedData' property with the fixed import
+        sortData(exportedData);
+        setLanguage(exportedData.languageID);
+      }
+
+      ToastMessage.showToast("Successfully downloaded the requested data.");
+    } catch (error) {
+      console.log("🚀 ~ onDownloadLatest ~ error:", error);
+      DialogBox.ShowGenericDialog(
+        "Downloading Error",
+        "There was an error trying to download the requested data: " + error
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <CommonLayout
       disableSaveButton={disableSaveButton}
@@ -150,6 +214,8 @@ export default function UserInterface() {
       includeLanguageSelector={true}
       language={language}
       onSetLanguage={setTargetLanguage}
+      onDownloadLatest={doWork}
+      isBusy={busy}
     >
       {/* TRANSLATED PANEL */}
       <div style={{ flexGrow: "1", marginRight: ".5rem" }}>

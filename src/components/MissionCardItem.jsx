@@ -23,15 +23,17 @@ export default function MissionCardItem({ item, disabled, onMissionUpdated }) {
 
   return (
     <>
-      <TextField
-        label={"id"}
-        variant="filled"
-        value={missionItem.id}
-        onFocus={(e) => e.target.select()}
-        disabled={true}
-        fullWidth
-        sx={{ marginBottom: "1rem" }}
-      />
+      {disabled && (
+        <div style={{ marginBottom: "1rem" }}>
+          <Typography>Source</Typography>
+        </div>
+      )}
+      {!disabled && (
+        <div style={{ marginBottom: "1rem" }}>
+          <Typography>{missionItem.id}</Typography>
+        </div>
+      )}
+
       <TextField
         label={"name"}
         variant="filled"
@@ -64,7 +66,7 @@ export default function MissionCardItem({ item, disabled, onMissionUpdated }) {
         disabled={disabled}
         onKeyUp={onKeyUp}
         fullWidth
-				multiline
+        multiline
         sx={{ marginBottom: "1rem" }}
       />
       <TextField

@@ -1,13 +1,19 @@
 //mui
 import { Typography } from "@mui/material";
 //my library
-import { saveFile, createMissionCardList, findObjectById } from "../utils/core";
+import {
+  saveFile,
+  createMissionCardList,
+  findObjectById,
+  downloadSource,
+} from "../utils/core";
 //libraries
 import { jsonrepair } from "jsonrepair";
 //my components
 import ToastMessage from "../components/ToastMessage";
 import CommonLayout from "../components/CommonLayout";
 import MissionCardItem from "../components/MissionCardItem";
+import DialogBox from "../components/DialogBox";
 //react
 import { useState } from "react";
 //source data
@@ -58,6 +64,7 @@ export default function MissionCardText() {
   //selected translated item in the tree
   const [selectedTranslatedItem, setSelectedTranslatedItem] = useState(null);
   const [disableSaveButton, setDisableSaveButton] = useState(true);
+  const [busy, setBusy] = useState(false);
 
   const handleItemSelectionToggle = (event, itemId, isSelected) => {
     setDisableDrop(true);
@@ -93,7 +100,7 @@ export default function MissionCardText() {
   function onFileDropped(fileInfo, fileContent) {
     if (fileInfo.name != expectedFilename) {
       ToastMessage.showToast(
-        `The imported filename doesn't match the expected data set: ${expectedFilename}`
+        `The imported filename doesn't match the expected filename: ${expectedFilename}`
       );
       return;
     }
@@ -124,6 +131,99 @@ export default function MissionCardText() {
     );
   }
 
+  async function doWork({ language, task }) {
+    setSelectedSourceItem(null);
+    setSelectedTranslatedItem(null);
+    CommonLayout.SelectTreeNone();
+    setDisableSaveButton(true);
+    setBusy(true);
+
+    itemArrayIndex = -1;
+    selectedTreeIndex = -1;
+    expectedFilename = "";
+
+    try {
+      let promises = [];
+      if (task.getSource) {
+        [
+          "core.json",
+          "twin.json",
+          "bespin.json",
+          "empire.json",
+          "hoth.json",
+          "jabba.json",
+          "lothal.json",
+          "other.json",
+        ].forEach((filename) => {
+          promises.push(
+            new Promise((resolve) => {
+              resolve(
+                downloadSource(
+                  "missioncardtext",
+                  "English (EN)",
+                  true,
+                  filename
+                )
+              );
+            })
+          );
+        });
+      }
+
+      if (task.getTranslation) {
+        //these are in order as they appear in the tree
+        [
+          "core.json",
+          "twin.json",
+          "bespin.json",
+          "empire.json",
+          "hoth.json",
+          "jabba.json",
+          "lothal.json",
+          "other.json",
+        ].forEach((filename) => {
+          promises.push(
+            new Promise((resolve) => {
+              resolve(
+                downloadSource("missioncardtext", language, true, filename)
+              );
+            })
+          );
+        });
+      }
+
+      let promise = await Promise.all(promises);
+
+      if (task.getSource && !task.getTranslation) {
+        //set the source
+        for (let index = 0; index < 8; index++) {
+          sourceTree[index].data = promise[index];
+          exportedDataArray[index] = JSON.parse(JSON.stringify(promise[index]));
+        }
+      } else if (task.getSource && task.getTranslation) {
+        //set both
+        for (let index = 0; index < 8; index++) {
+          sourceTree[index].data = promise[index];
+        }
+        for (let index = 0; index < 8; index++) {
+          exportedDataArray[index] = JSON.parse(
+            JSON.stringify(promise[index + 8])
+          );
+        }
+      }
+
+      ToastMessage.showToast("Successfully downloaded the requested data.");
+    } catch (error) {
+      console.log("🚀 ~ onDownloadLatest ~ error:", error);
+      DialogBox.ShowGenericDialog(
+        "Downloading Error",
+        "There was an error trying to download the requested data: " + error
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <CommonLayout
       disableSaveButton={disableSaveButton}
@@ -134,6 +234,8 @@ export default function MissionCardText() {
       onSave={onSaveFile}
       dropDisabled={disableDrop}
       dropMessage={"Select an Expansion for the data you want to import."}
+      onDownloadLatest={doWork}
+      isBusy={busy}
     >
       {/* TRANSLATED PANEL */}
       <div style={{ flexGrow: "1", marginRight: ".5rem" }}>

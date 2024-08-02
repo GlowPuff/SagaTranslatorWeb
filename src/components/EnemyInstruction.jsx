@@ -7,6 +7,7 @@ export default function EnemyInstruction({
   disabled = false,
   instruction,
   onInstructionUpdated,
+	instructionLabel
 }) {
   const [instName, setInstName] = useState(instruction.instName);
   const [instructionContentArray, setInstructionContentArray] = useState(
@@ -33,6 +34,17 @@ export default function EnemyInstruction({
 
   return (
     <>
+      {disabled && (
+        <div style={{ marginBottom: "1rem" }}>
+          <Typography>Source</Typography>
+        </div>
+      )}
+      {!disabled && (
+        <div style={{ marginBottom: "1rem" }}>
+          <Typography>{instructionLabel}</Typography>
+        </div>
+      )}
+
       <TextField
         label={"Name"}
         variant="filled"
@@ -76,4 +88,5 @@ EnemyInstruction.propTypes = {
   disabled: PropTypes.bool,
   instruction: PropTypes.object,
   onInstructionUpdated: PropTypes.func,
+  instructionLabel:PropTypes.string,
 };

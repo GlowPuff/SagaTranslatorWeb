@@ -1,7 +1,12 @@
 //libraries
 import { jsonrepair } from "jsonrepair";
 //my library
-import { saveFile, createMissionList, findObjectById } from "../utils/core";
+import {
+  saveFile,
+  createMissionList,
+  findObjectById,
+  downloadSource,
+} from "../utils/core";
 import { validateMission } from "../utils/datavalidation";
 //my components
 import CommonLayout from "../components/CommonLayout";
@@ -15,6 +20,7 @@ import { useLocation } from "react-router-dom";
 let sourceData; //the English source data
 let exportedData; //the saved data
 let brokenIDs = [];
+let expansion;
 
 export default function Mission() {
   //selected source item in the tree
@@ -25,7 +31,9 @@ export default function Mission() {
   const [outFilename, setOutFilename] = useState("");
   const [title, setTitle] = useState("MISSION");
   const [workLanguage, setWorkLanguage] = useState("English (EN)");
-  const [sourceDataTreeList, setTreeList] = useState();
+  const [sourceDataTreeList, setTreeList] = useState(); //the tree view
+  const [busy, setBusy] = useState(false);
+  const [disabledSourceButton, setDisabledSourceButton] = useState(false);
 
   let location = useLocation();
   //console.log("🚀 ~ Mission ~ location:", location);
@@ -43,6 +51,7 @@ export default function Mission() {
           sourceData = custom;
           setTitle(sourceData.missionProperties.missionName);
           setOutFilename(`custom.json`);
+          setDisabledSourceButton(true);
         }
       } else if (loc.length == 4) {
         const response = await fetch(`/Missions/${loc[2]}/${loc[3]}_EN.json`);
@@ -50,6 +59,7 @@ export default function Mission() {
         sourceData = await response.json();
         setTitle(`${loc[3]}`);
         setOutFilename(`${loc[3]}_EN.json`);
+        expansion = loc[2];
       }
 
       //sort the data
@@ -139,9 +149,9 @@ export default function Mission() {
   };
 
   function onFileDropped(fileInfo, fileContent) {
-    if (!fileInfo.name.includes(title)) {
+    if (!fileInfo.name.includes(title + "_")) {
       ToastMessage.showToast(
-        `The imported filename doesn't match the expected data set: ${title}`
+        `The imported filename doesn't match the expected data: ${title}`
       );
       return;
     }
@@ -150,29 +160,18 @@ export default function Mission() {
     setSelectedSourceItem(null);
     setSelectedTranslatedItem(null);
     CommonLayout.SelectTreeNone();
-    brokenIDs = [];
 
-    let result = "";
+    brokenIDs = [];
+    let fixResult = "";
     try {
       //repair the imported data
-      let importedData = JSON.parse(jsonrepair(fileContent));
-      let fixed;
-      let broken = [];
-      let markRed = [];
+      const [result, markRed] = fixData(
+        fileInfo.name,
+        JSON.parse(jsonrepair(fileContent))
+      );
+      onSetLanguage(exportedData.languageID);
 
-      [broken, fixed, markRed] = validateMission(sourceData, importedData);
-
-      exportedData = fixed;
-      brokenIDs = broken.map((item) => item[1]);
-
-      if (broken.length > 0) {
-        DialogBox.ReportMissionErrors(broken, []);
-      } else ToastMessage.showToast("Data imported, no errors found");
-
-      setDisableSaveButton(false);
-      setWorkLanguage(exportedData.languageID);
-      1;
-      result = `Data imported: ${fileInfo.name}`;
+      fixResult = result;
 
       let treeCopy = [...sourceDataTreeList];
       for (let index = 0; index < sourceDataTreeList.length; index++) {
@@ -197,15 +196,38 @@ export default function Mission() {
       //set the updated tree view with "*" for erroneous/missing data
       setTreeList(treeCopy);
     } catch (error) {
-      result = "There was an error importing the data: " + error;
+      fixResult = "There was an error importing the data: " + error;
       console.log("🚀 ~ onFileDropped ~ error:", error);
       DialogBox.ShowGenericDialog(
         "Import Error",
         "There was an error importing the data: " + error
       );
     } finally {
-      ToastMessage.showToast(result);
+      ToastMessage.showToast(fixResult);
     }
+  }
+
+  // "importedData" is repaired mission object, sets exportedData with fixed data
+  function fixData(filename, importedData) {
+    let fixed;
+    let broken = [];
+    let markRed = [];
+
+    [broken, fixed, markRed] = validateMission(sourceData, importedData);
+
+    exportedData = fixed;
+    brokenIDs = broken.map((item) => item[1]);
+
+    if (broken.length > 0) {
+      DialogBox.ReportMissionErrors(broken, []);
+    } else ToastMessage.showToast("Data imported, no errors found");
+
+    setDisableSaveButton(false);
+    setWorkLanguage(exportedData.languageID);
+    1;
+    let result = `Data imported: ${filename}`;
+
+    return [result, markRed];
   }
 
   function onSaveFile() {
@@ -242,8 +264,101 @@ export default function Mission() {
     //console.log("🚀 ~ onItemUpdated ~ exportedData:", exportedData);
   }
 
+  //sets working language and returns the parsed filename (example: "CORE1_EN.json")
   function onSetLanguage(lang) {
     setWorkLanguage(lang);
+    exportedData.languageID = lang;
+    let languageID = lang.match(/\((.*?)\)/)[1];
+    let filename = title + "_" + languageID.toUpperCase() + ".json";
+    setOutFilename(filename);
+    return filename;
+  }
+
+  async function doWork({ language, task }) {
+    setSelectedSourceItem(null);
+    setSelectedTranslatedItem(null);
+    CommonLayout.SelectTreeNone();
+
+    try {
+      let promises = [];
+      let filename = onSetLanguage(language);
+
+      if (task.getSource) {
+        promises.push(
+          new Promise((resolve) => {
+            resolve(
+              downloadSource(
+                "missionEnglish",
+                "",
+                true,
+                `${expansion}/${title.toUpperCase()}_EN.json`
+              )
+            ); //Core/COREXX_EN.json
+          })
+        );
+      }
+
+      if (task.getTranslation) {
+        promises.push(
+          new Promise((resolve) => {
+            resolve(
+              downloadSource(
+                "missionTranslation",
+                language,
+                true,
+                `${expansion}/${filename}`
+              )
+            );
+          })
+        );
+      }
+
+      let promise = await Promise.all(promises);
+
+      if (task.getSource && !task.getTranslation) {
+        //set the source
+        sourceData = promise[0];
+        //sort the data
+        sourceData.initialGroups.sort((a, b) =>
+          a.cardName > b.cardName ? 1 : -1
+        );
+        sourceData.mapEntities.sort((a, b) =>
+          a.entityName > b.entityName ? 1 : -1
+        );
+        sourceData.events.sort((a, b) => (a.eventName > b.eventName ? 1 : -1));
+        //make a copy of defaults for the translation
+        exportedData = JSON.parse(JSON.stringify(sourceData));
+
+        setWorkLanguage(sourceData.languageID);
+        setTreeList(createMissionList(sourceData));
+      } else if (task.getSource && task.getTranslation) {
+        //set both
+        sourceData = promise[0];
+        //sort the data
+        sourceData.initialGroups.sort((a, b) =>
+          a.cardName > b.cardName ? 1 : -1
+        );
+        sourceData.mapEntities.sort((a, b) =>
+          a.entityName > b.entityName ? 1 : -1
+        );
+        sourceData.events.sort((a, b) => (a.eventName > b.eventName ? 1 : -1));
+        //fix the imported translation
+        fixData(filename, promise[1]); //sets 'exportedData', report errors
+
+        let newTree = createMissionList(sourceData);
+        setTreeList(newTree);
+      }
+
+      ToastMessage.showToast("Successfully downloaded the requested data.");
+    } catch (error) {
+      console.log("🚀 ~ onDownloadLatest ~ error:", error);
+      DialogBox.ShowGenericDialog(
+        "Downloading Error",
+        "There was an error trying to download the requested data: " + error
+      );
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
@@ -257,6 +372,9 @@ export default function Mission() {
       includeLanguageSelector={true}
       language={workLanguage}
       onSetLanguage={(lang) => onSetLanguage(lang)}
+      onDownloadLatest={doWork}
+      isBusy={busy}
+      disabledSourceButton={disabledSourceButton}
     >
       {/* TRANSLATED PANEL */}
       <div style={{ flexGrow: "1", marginRight: ".5rem" }}>

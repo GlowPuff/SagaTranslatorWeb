@@ -3,6 +3,8 @@ import isArray from "lodash/isArray";
 import has from "lodash/has";
 import forEach from "lodash/forEach";
 import { purple, blue } from "@mui/material/colors";
+import { jsonrepair } from "jsonrepair";
+import { sources } from "./sources";
 
 let createTranslatorTheme = {
   components: {
@@ -171,7 +173,11 @@ function createTreeListFromArray(sourceArray) {
   function createList(sObj, itemIndex) {
     if (isArray(sObj)) {
       forEach(sObj, (value) => {
-        tree.push({ id: `${itemIndex++}`, label: value.name });
+        tree.push({
+          id: `${itemIndex++}`,
+          label: value.name,
+          itemID: value.id,
+        });
       });
     } else {
       console.log("SKIPPING, not array: ", sObj);
@@ -476,6 +482,39 @@ function findObjectById(arr, id) {
   return null;
 }
 
+//returns the data as a repaired JSON object
+//languageID is "German (DE)", "English (EN)", etc
+async function downloadSource(
+  dataType,
+  languageID,
+  isJSON,
+  customFilename = ""
+) {
+  if (!Object.hasOwnProperty.call(sources, dataType))
+    throw new Error(`Unknown dataType requested: ${dataType}`);
+
+  //extract the language ID
+  if (languageID) {
+    languageID = languageID.match(/\((.*?)\)/)[1];
+    languageID = `${languageID[0].toUpperCase()}${languageID[1].toLowerCase()}`;
+  }
+
+  const response = await fetch(
+    sources[dataType].url +
+      languageID +
+      sources[dataType].subfolder +
+      (customFilename || sources[dataType].filename)
+  );
+  if (!response.ok) {
+    throw new Error(`Fetch error: ${response.status}`);
+  }
+
+  let json = await response.text();
+  //if it's JSON, repair and parse it
+  if (isJSON) json = JSON.parse(jsonrepair(json));
+  return json;
+}
+
 export {
   createTreeList,
   findObjectById,
@@ -491,4 +530,5 @@ export {
   createHelpOverlayList,
   createUIList,
   createMissionList,
+  downloadSource,
 };

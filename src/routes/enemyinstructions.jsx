@@ -1,6 +1,6 @@
 //mui
 import { Typography } from "@mui/material";
-import { createInstructionList, saveFile } from "../utils/core";
+import { createInstructionList, saveFile, downloadSource } from "../utils/core";
 //libraries
 import { jsonrepair } from "jsonrepair";
 //my components
@@ -15,7 +15,7 @@ import instructionDataRaw from "../translationdata/instructions.json?raw";
 
 //source data formatted for the tree view
 let sourceDataTreeList;
-//raw instruction json object
+//instruction json object
 let instructionData;
 //repair the source data
 try {
@@ -41,6 +41,7 @@ export default function EnemyInstructions() {
   //selected translated item in the tree
   const [selectedTranslatedItem, setSelectedTranslatedItem] = useState(null);
   const [disableSaveButton, setDisableSaveButton] = useState(false);
+  const [busy, setBusy] = useState(false);
 
   const handleItemSelectionToggle = (event, itemId, isSelected) => {
     if (isSelected) {
@@ -54,7 +55,7 @@ export default function EnemyInstructions() {
   function onFileDropped(fileInfo, fileContent) {
     if (fileInfo.name != "instructions.json") {
       ToastMessage.showToast(
-        "The imported filename doesn't match the expected data set: instructions.json"
+        "The imported filename doesn't match the expected filename: instructions.json"
       );
       return;
     }
@@ -85,6 +86,56 @@ export default function EnemyInstructions() {
     exportedData[selectedTreeIndex] = instruction;
   }
 
+  async function doWork({ language, task }) {
+    setSelectedSourceItem(null);
+    setSelectedTranslatedItem(null);
+    CommonLayout.SelectTreeNone();
+    setBusy(true);
+
+    try {
+      let promises = [];
+      if (task.getSource) {
+        promises.push(
+          new Promise((resolve) => {
+            resolve(downloadSource("instructions", "English (EN)", true, ""));
+          })
+        );
+      }
+
+      if (task.getTranslation) {
+        promises.push(
+          new Promise((resolve) => {
+            resolve(downloadSource("instructions", language, true, ""));
+          })
+        );
+      }
+
+      let promise = await Promise.all(promises);
+
+      if (task.getSource && !task.getTranslation) {
+        //set the source
+        instructionData = promise[0];
+        sourceDataTreeList = createInstructionList(instructionData);
+        exportedData = JSON.parse(JSON.stringify(instructionData));
+      } else if (task.getSource && task.getTranslation) {
+        //set both
+        instructionData = promise[0];
+        sourceDataTreeList = createInstructionList(instructionData);
+        exportedData = promise[1];
+      }
+
+      ToastMessage.showToast("Successfully downloaded the requested data.");
+    } catch (error) {
+      console.log("🚀 ~ onDownloadLatest ~ error:", error);
+      DialogBox.ShowGenericDialog(
+        "Downloading Error",
+        "There was an error trying to download the requested data: " + error
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <CommonLayout
       disableSaveButton={disableSaveButton}
@@ -94,6 +145,8 @@ export default function EnemyInstructions() {
       projectTitle={"ENEMY INSTRUCTIONS"}
       handleItemSelectionToggle={handleItemSelectionToggle}
       onSave={onSaveFile}
+      onDownloadLatest={doWork}
+      isBusy={busy}
     >
       {/* TRANSLATED PANEL */}
       <div style={{ flexGrow: "1", marginRight: ".5rem" }}>
@@ -102,6 +155,7 @@ export default function EnemyInstructions() {
             key={selectedTranslatedItem.instID}
             instruction={selectedTranslatedItem}
             onInstructionUpdated={(e) => onInstructionUpdated(e)}
+            instructionLabel={selectedSourceItem.data.instName}
           />
         )}
       </div>

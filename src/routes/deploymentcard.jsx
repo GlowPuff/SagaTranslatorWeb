@@ -1,6 +1,11 @@
 //mui
 import { Typography } from "@mui/material";
-import { createDeploymentList, findObjectById, saveFile } from "../utils/core";
+import {
+  createDeploymentList,
+  findObjectById,
+  saveFile,
+  downloadSource,
+} from "../utils/core";
 //libraries
 import { jsonrepair } from "jsonrepair";
 //my components
@@ -18,12 +23,13 @@ import villainDataRaw from "../translationdata/DeploymentGroups/villains.json?ra
 
 //source data formatted for the tree view
 let sourceDataTreeList;
+let allies, heroes, enemy, villains;
 //repair the source data
 try {
-  const allies = JSON.parse(jsonrepair(allyDataRaw));
-  const heroes = JSON.parse(jsonrepair(heroDataRaw));
-  const enemy = JSON.parse(jsonrepair(enemyDataRaw));
-  const villains = JSON.parse(jsonrepair(villainDataRaw));
+  allies = JSON.parse(jsonrepair(allyDataRaw));
+  heroes = JSON.parse(jsonrepair(heroDataRaw));
+  enemy = JSON.parse(jsonrepair(enemyDataRaw));
+  villains = JSON.parse(jsonrepair(villainDataRaw));
   sourceDataTreeList = createDeploymentList([allies, heroes, enemy, villains]);
 } catch (error) {
   DialogBox.ShowGenericDialog(
@@ -50,6 +56,7 @@ export default function DeploymentCard() {
     "Select a group type for the data you want to import."
   );
   const [projectTitle, setProjectTitle] = useState("");
+  const [busy, setBusy] = useState(false);
 
   const handleItemSelectionToggle = (event, itemId, isSelected) => {
     //process root tree item (group data set: allies, enemies, etc)
@@ -102,7 +109,7 @@ export default function DeploymentCard() {
     try {
       //repair the imported data
       let importedData = JSON.parse(jsonrepair(fileContent));
-			//set the imported data into the existing translation array data
+      //set the imported data into the existing translation array data
       for (let index = 0; index < importedData.length; index++) {
         translatedDataTreeList[selectedTreeIndex].data[index] =
           importedData[index];
@@ -131,6 +138,112 @@ export default function DeploymentCard() {
       updatedGroup;
   }
 
+  async function doWork({ language, task }) {
+    setSelectedSourceItem(null);
+    setSelectedTranslatedItem(null);
+    CommonLayout.SelectTreeNone();
+    setBusy(true);
+
+    try {
+      let promises = [];
+
+      if (task.getSource) {
+        promises.push(
+          new Promise((resolve) => {
+            resolve(downloadSource("allies", "English (EN)", true, ""));
+          })
+        );
+        promises.push(
+          new Promise((resolve) => {
+            resolve(downloadSource("heroes", "English (EN)", true, ""));
+          })
+        );
+        promises.push(
+          new Promise((resolve) => {
+            resolve(downloadSource("enemies", "English (EN)", true, ""));
+          })
+        );
+        promises.push(
+          new Promise((resolve) => {
+            resolve(downloadSource("villains", "English (EN)", true, ""));
+          })
+        );
+      }
+
+      if (task.getTranslation) {
+        promises.push(
+          new Promise((resolve) => {
+            resolve(downloadSource("allies", language, true, ""));
+          })
+        );
+        promises.push(
+          new Promise((resolve) => {
+            resolve(downloadSource("heroes", language, true, ""));
+          })
+        );
+        promises.push(
+          new Promise((resolve) => {
+            resolve(downloadSource("enemies", language, true, ""));
+          })
+        );
+        promises.push(
+          new Promise((resolve) => {
+            resolve(downloadSource("villains", language, true, ""));
+          })
+        );
+      }
+
+      let promise = await Promise.all(promises);
+
+      if (task.getSource && !task.getTranslation) {
+        //set the source
+        allies = promise[0];
+        heroes = promise[1];
+        enemy = promise[2];
+        villains = promise[3];
+
+        sourceDataTreeList = createDeploymentList([
+          allies,
+          heroes,
+          enemy,
+          villains,
+        ]);
+        translatedDataTreeList = JSON.parse(JSON.stringify(sourceDataTreeList));
+      } else if (task.getSource && task.getTranslation) {
+        //set both
+        allies = promise[0];
+        heroes = promise[1];
+        enemy = promise[2];
+        villains = promise[3];
+        sourceDataTreeList = createDeploymentList([
+          allies,
+          heroes,
+          enemy,
+          villains,
+        ]);
+        //set the imported data into the existing translation array data
+        for (let rootIndex = 0; rootIndex < 4; rootIndex++) {
+          for (let index = 0; index < promise[4 + rootIndex].length; index++) {
+            translatedDataTreeList[rootIndex].data[index] =
+              promise[4 + rootIndex][index];
+            translatedDataTreeList[rootIndex].children[index].data =
+              promise[4 + rootIndex][index];
+          }
+        }
+      }
+
+      ToastMessage.showToast("Successfully downloaded the requested data.");
+    } catch (error) {
+      console.log("🚀 ~ onDownloadLatest ~ error:", error);
+      DialogBox.ShowGenericDialog(
+        "Downloading Error",
+        "There was an error trying to download the requested data: " + error
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <CommonLayout
       disableSaveButton={disableSaveButton}
@@ -141,6 +254,8 @@ export default function DeploymentCard() {
       projectTitle={"DEPLOYMENT CARD TEXT " + projectTitle}
       dropMessage={dropMessage}
       onSave={onSaveFile}
+      onDownloadLatest={doWork}
+      isBusy={busy}
     >
       {/* TRANSLATED PANEL */}
       <div style={{ flexGrow: "1", marginRight: ".5rem" }}>

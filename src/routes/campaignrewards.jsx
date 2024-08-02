@@ -1,56 +1,62 @@
 //mui
-import { ThemeProvider, createTheme } from "@mui/material/styles";
-import { Drawer, Box, Toolbar, Typography, CssBaseline } from "@mui/material";
-import { RichTreeView } from "@mui/x-tree-view/RichTreeView";
+import Typography from "@mui/material/Typography";
 //my library
 import {
   findObjectById,
   saveFile,
-  createTranslatorTheme,
   createTreeListFromArray,
+  downloadSource,
 } from "../utils/core";
+//libraries
+import { jsonrepair } from "jsonrepair";
 //my components
 import ToastMessage from "../components/ToastMessage";
-import DragDropDiv from "../components/DragDropDiv";
-import ICAppBar from "../components/ICAppBar";
 import TextInput from "../components/TextInput";
 import DialogBox from "../components/DialogBox";
+import CommonLayout from "../components/CommonLayout";
 //react
 import { useState } from "react";
 //source data
 import sourceData from "../translationdata/CampaignData/rewards.json";
 
 //variables
-let translatedData = JSON.parse(JSON.stringify(sourceData)); //make unique copy of source data
-const drawerWidth = 240;
+let translatedData = JSON.parse(jsonrepair(JSON.stringify(sourceData))); //data to export, make unique copy of source data
+let workingSourceData = sourceData; //copy the imported data so it can later be modified from downloading the latest source
+let selectedTreeIndex = -1;
+
+//replace null strings with empty strings
+translatedData = translatedData.map((item) => {
+  if (!Object.hasOwnProperty.call(item, "extra")) item.extra = "";
+  return item;
+});
 
 export default function CampaignRewards() {
   const [sourceTreeList, setSourceTreeList] = useState(
     createTreeListFromArray(sourceData)
   );
-  const [translatedTreeList, setTranslatedTreeList] = useState(
-    createTreeListFromArray(sourceData)
-  );
+  const [selectedTranslation, setSelectedTranslation] = useState(null);
   const [selectedSourceItemArray, setSelectedSourceItemArray] = useState([]);
-  const [selectedTranslatedItemArray, setSelectedTranslatedItemArray] =
-    useState([]);
-  const [selectedItems, setSelectedItems] = useState([]);
   const [disableSaveButton, setDisableSaveButton] = useState(false);
-
-  const darkTheme = createTheme(createTranslatorTheme);
+  const [busy, setBusy] = useState(false);
 
   function onFileDropped(fileInfo, fileContent) {
+    if (fileInfo.name != "rewards.json") {
+      ToastMessage.showToast(
+        "The imported filename doesn't match the expected filename: rewards.json"
+      );
+      return;
+    }
+
     //clear existing data
     setSelectedSourceItemArray([]);
-    setSelectedTranslatedItemArray([]);
     setSourceTreeList([]);
-    setTranslatedTreeList([]);
-    setSelectedItems([]);
+    setSelectedTranslation(null);
     setDisableSaveButton(true);
+    CommonLayout.SelectTreeNone();
 
     let importedData;
     try {
-      importedData = JSON.parse(fileContent);
+      importedData = JSON.parse(jsonrepair(fileContent));
     } catch (error) {
       ToastMessage.showToast(`Error parsing imported file: ${error}`);
       console.log(`Error parsing imported file: ${error}`);
@@ -59,11 +65,15 @@ export default function CampaignRewards() {
 
     //add any properties that don't exist
     let missingData = [];
-    for (let index = 0; index < sourceData.length; index++) {
-      let found = importedData.find((x) => x.id === sourceData[index].id);
+    for (let index = 0; index < workingSourceData.length; index++) {
+      let found = importedData.find(
+        (x) => x.id === workingSourceData[index].id
+      );
       if (typeof found === "undefined") {
-        importedData.splice(index, 0, sourceData[index]);
-        missingData.push(sourceData[index].id + " / " + sourceData[index].name);
+        importedData.splice(index, 0, workingSourceData[index]);
+        missingData.push(
+          workingSourceData[index].id + " / " + workingSourceData[index].name
+        );
       }
     }
 
@@ -76,126 +86,152 @@ export default function CampaignRewards() {
     } else ToastMessage.showToast("Data imported, no errors found");
 
     //create the tree view lists
-    setSourceTreeList(createTreeListFromArray(sourceData));
-    setTranslatedTreeList(createTreeListFromArray(translatedData));
+    setSourceTreeList(createTreeListFromArray(workingSourceData));
   }
 
   const handleItemSelectionToggle = (event, itemId, isSelected) => {
     if (isSelected) {
       let sItem = sourceTreeList.filter((x) => x.id == itemId)[0];
-      let tItem = translatedTreeList.filter((x) => x.id == itemId)[0];
+      let tItem = translatedData.filter((x) => x.id == sItem.itemID)[0];
+      selectedTreeIndex = itemId;
 
       if (sItem) {
         setSelectedSourceItemArray([findObjectById(sourceTreeList, itemId)]);
       }
 
       if (tItem) {
-        setSelectedTranslatedItemArray([
-          findObjectById(translatedTreeList, itemId),
-        ]);
+        setSelectedTranslation(tItem);
       }
     }
   };
 
+  async function doWork({ language, task }) {
+    setSelectedSourceItemArray([]);
+    setSelectedTranslation(null);
+    CommonLayout.SelectTreeNone();
+    setBusy(true);
+
+    try {
+      let promises = [];
+      if (task.getSource) {
+        promises.push(
+          new Promise((resolve) => {
+            resolve(downloadSource("campaignrewards", "English (EN)", true));
+          })
+        );
+      }
+
+      if (task.getTranslation) {
+        promises.push(
+          new Promise((resolve) => {
+            resolve(downloadSource("campaignrewards", language, true));
+          })
+        );
+      }
+
+      let promise = await Promise.all(promises);
+
+      //set the source
+      if (task.getSource && !task.getTranslation) {
+        workingSourceData = promise[0];
+        translatedData = JSON.parse(JSON.stringify(workingSourceData));
+
+        setSourceTreeList(createTreeListFromArray(workingSourceData));
+      } else if (task.getSource && task.getTranslation) {
+        //set both
+        workingSourceData = promise[0];
+        translatedData = promise[1];
+        setSourceTreeList(createTreeListFromArray(workingSourceData));
+      }
+
+      ToastMessage.showToast("Successfully downloaded the requested data.");
+    } catch (error) {
+      console.log("🚀 ~ onDownloadLatest ~ error:", error);
+      DialogBox.ShowGenericDialog(
+        "Downloading Error",
+        "There was an error trying to download the requested data: " + error
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function onUpdateText(key, txt) {
+    let copy = { ...selectedTranslation };
+    copy[key] = txt;
+    let index = translatedData.findIndex((x) => x.id === copy.id);
+    translatedData[index] = copy;
+  }
+
   return (
-    <ThemeProvider theme={darkTheme}>
-      <Box sx={{ display: "flex" }}>
-        <CssBaseline />
-
-        <ICAppBar
-          title={"CAMPAIGN REWARDS"}
-          includeLanguageSelector={false}
-          disableSaveButton={disableSaveButton}
-          onSave={() =>
-            saveFile(translatedData, "rewards.json", (m) =>
-              ToastMessage.showToast(m)
-            )
-          }
-        />
-
-        <Drawer
-          open={true}
-          variant="permanent"
-          sx={{
-            position: "relative",
-            width: drawerWidth,
-            flexShrink: 0,
-            [`& .MuiDrawer-paper`]: {
-              width: drawerWidth,
-              boxSizing: "border-box",
-            },
-          }}
-        >
-          <Toolbar />
-
-          <Box
-            onDragOver={(ev) => ev.preventDefault()}
-            onDrop={(ev) => ev.preventDefault()}
-          >
-            <DragDropDiv onFileDropped={onFileDropped} />
-
-            <RichTreeView
-              items={sourceTreeList ?? []}
-              onItemSelectionToggle={handleItemSelectionToggle}
-              selectedItems={selectedItems}
-              onSelectedItemsChange={(ev, ids) => setSelectedItems(ids)}
+    <CommonLayout
+      disableSaveButton={disableSaveButton}
+      onFileDropped={onFileDropped}
+      treeViewList={sourceTreeList ?? []}
+      handleItemSelectionToggle={handleItemSelectionToggle}
+      projectTitle={"CAMPAIGN REWARDS"}
+      onSave={() =>
+        saveFile(translatedData, "rewards.json", (m) =>
+          ToastMessage.showToast(m)
+        )
+      }
+      drawerWidth={340}
+      onDownloadLatest={doWork}
+      isBusy={busy}
+    >
+      {/* TRANSLATED PANEL */}
+      <div style={{ flexGrow: "1", marginRight: ".5rem" }}>
+        {selectedTranslation && (
+          <div style={{ marginBottom: "1rem" }}>
+            <Typography variant="p">
+              {workingSourceData[selectedTreeIndex].name}
+            </Typography>
+          </div>
+        )}
+        {selectedTranslation && (
+          <div key={selectedTranslation.id}>
+            <TextInput
+              label={workingSourceData[selectedTreeIndex].name}
+              disabled={false}
+              intialValue={selectedTranslation.name}
+              onTextUpdated={(txt) => onUpdateText("name", txt)}
             />
-          </Box>
-        </Drawer>
+            <TextInput
+              label={"Extra"}
+              disabled={false}
+              intialValue={selectedTranslation.extra}
+              onTextUpdated={(txt) => onUpdateText("extra", txt)}
+            />
+          </div>
+        )}
+      </div>
 
-        <Box
-          sx={{
-            flexGrow: 1,
-            height: "100vh",
-            overflow: "auto",
-          }}
-        >
-          <Toolbar />
-
-          {/* MAIN CONTENT */}
-          <Box
-            display={"flex"}
-            flexDirection={"row"}
-            justifyItems={"center"}
-            sx={{ mb: 10, mt: 2, marginLeft: "2rem", marginRight: "2rem" }}
-          >
-            {/* TRANSLATED PANEL */}
-            <div style={{ flexGrow: "1", marginRight: ".5rem" }}>
-              {selectedTranslatedItemArray.map((item, index) => (
-                <TextInput
-                  key={item.id}
-                  label={selectedSourceItemArray[index].label}
-                  disabled={false}
-                  dataSet={translatedData[item.id]}
-                  dataPath={"name"}
-                />
-              ))}
+      {/* ENGLISH SOURCE PANEL */}
+      <div style={{ flexGrow: "1", marginLeft: ".5rem" }}>
+        {selectedSourceItemArray.length > 0 && (
+          <div style={{ marginBottom: "1rem" }}>
+            <Typography variant="p">Source</Typography>
+          </div>
+        )}
+        {selectedSourceItemArray.length == 0 ? (
+          <Typography variant="p">Select an item to translate.</Typography>
+        ) : (
+          selectedSourceItemArray.map((item) => (
+            <div key={item.id}>
+              <TextInput
+                label={item.label}
+                disabled={true}
+                intialValue={workingSourceData[item.id].name}
+              />
+              <TextInput
+                label={"Extra"}
+                disabled={true}
+                intialValue={workingSourceData[item.id].extra || ""}
+              />
             </div>
-
-            {/* ENGLISH SOURCE PANEL */}
-            <div style={{ flexGrow: "1", marginLeft: ".5rem" }}>
-              {selectedSourceItemArray.length == 0 ? (
-                <Typography variant="p">
-                  Select an item to translate.
-                </Typography>
-              ) : (
-                selectedSourceItemArray.map((item) => (
-                  <TextInput
-                    key={item.id}
-                    label={item.label}
-                    disabled={true}
-                    dataSet={sourceData[item.id]}
-                    dataPath={"name"}
-                  />
-                ))
-              )}
-            </div>
-          </Box>
-        </Box>
-      </Box>
-
-      <ToastMessage />
-      <DialogBox />
-    </ThemeProvider>
+          ))
+        )}
+      </div>
+    </CommonLayout>
   );
 }

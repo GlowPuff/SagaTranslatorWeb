@@ -78,7 +78,7 @@ function App() {
     >
       <div className="gridContainer">{projects}</div>
 
-      <div className="versionDiv">Version 1.0</div>
+      <div className="versionDiv">Version {import.meta.env.VITE_VERSION}</div>
 
       <Alert
         severity="info"

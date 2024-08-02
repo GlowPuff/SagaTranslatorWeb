@@ -33,7 +33,7 @@ export default function MissionEvents({
     (x) => x[0] === "eventName"
   )[0][1];
 
-	const eventGUID = Object.entries(data.data).filter(
+  const eventGUID = Object.entries(data.data).filter(
     (x) => x[0] === "GUID"
   )[0][1];
 
@@ -53,7 +53,7 @@ export default function MissionEvents({
             disabled={disabled}
             eaIndex={key}
             brokenIDs={brokenIDs}
-						eaGUID={item.GUID}
+            eaGUID={item.GUID}
           />
         );
       case 2:
@@ -189,17 +189,14 @@ export default function MissionEvents({
         <div
           style={{
             marginBottom: "1rem",
-            color:
-              !disabled && brokenIDs.includes(eventGUID)
-                ? "red"
-                : "white",
+            color: !disabled && brokenIDs.includes(eventGUID) ? "red" : "white",
           }}
         >
           <Typography>{`Event: ${eventName}`}</Typography>
         </div>
       ) : (
-        <div style={{ marginBottom: "1rem", color: "#6dcaf2" }}>
-          <Typography variant="button">Source</Typography>
+        <div style={{ marginBottom: "1rem" }}>
+          <Typography>Source</Typography>
         </div>
       )}
 

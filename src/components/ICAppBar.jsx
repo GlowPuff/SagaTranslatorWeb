@@ -9,6 +9,7 @@ import {
   FormLabel,
   Button,
   Tooltip,
+  Box,
 } from "@mui/material";
 import PropTypes from "prop-types";
 
@@ -20,9 +21,35 @@ export default function ICAppBar({
   includeLanguageSelector = false,
   onSave,
   disableSaveButton,
+  onDownloadLatest,
+  isBusy = false,
+  disabledSourceButton = false,
 }) {
   function handleChange(event) {
     onSetLanguage(event.target.value);
+  }
+
+  function getLanguages() {
+    let languages = [
+      "English (EN)",
+      "German (DE)",
+      "Spanish (ES)",
+      "French (FR)",
+      "Polski (PL)",
+      "Italian (IT)",
+      "Magyar (HU)",
+      "Norwegian (NO)",
+      "Russian (RU)",
+    ];
+    return languages.map((item, index) => (
+      <MenuItem key={index} value={item}>
+        {item}
+      </MenuItem>
+    ));
+  }
+
+  function downloadLatest() {
+    onDownloadLatest();
   }
 
   return (
@@ -50,7 +77,12 @@ export default function ICAppBar({
         </Typography>
 
         {includeLanguageSelector && (
-          <div className="appBarLanguageDiv" style={{ marginRight: "1rem" }}>
+          <div
+            className={
+              "appBarLanguageDiv " + (isBusy ? "missionDialogDisabled" : "")
+            }
+            style={{ marginRight: "1rem" }}
+          >
             <Typography
               variant="subtitle2"
               component="div"
@@ -60,7 +92,13 @@ export default function ICAppBar({
               {barText}
             </Typography>
 
-            <div style={{ marginLeft: "auto" }}>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                marginLeft: "auto",
+              }}
+            >
               <FormLabel sx={{ marginRight: "1rem", color: "white" }}>
                 Target Language:
               </FormLabel>
@@ -70,29 +108,46 @@ export default function ICAppBar({
                 displayEmpty
                 sx={{ minWidth: "200px", marginLeft: "auto" }}
               >
-                <MenuItem value={"English (EN)"}>English (EN)</MenuItem>
-                <MenuItem value={"German (DE)"}>German (DE)</MenuItem>
-                <MenuItem value={"Spanish (ES)"}>Spanish (ES)</MenuItem>
-                <MenuItem value={"French (FR)"}>French (FR)</MenuItem>
-                <MenuItem value={"Polski (PL)"}>Polski (PL)</MenuItem>
-                <MenuItem value={"Italian (IT)"}>Italian (IT)</MenuItem>
-                <MenuItem value={"Magyar (HU)"}>Magyar (HU)</MenuItem>
-                <MenuItem value={"Norwegian (NO)"}>Norwegian (NO)</MenuItem>
-                <MenuItem value={"Russian (RU)"}>Russian (RU)</MenuItem>
+                {getLanguages()}
               </Select>
             </div>
           </div>
         )}
 
-        <Button
-          color="secondary"
-          variant="contained"
-          sx={{ marginLeft: "auto", flexShrink: "0" }}
-          disabled={disableSaveButton}
-          onClick={() => onSave()}
-        >
-          Save File...
-        </Button>
+        <Box sx={{ flexGrow: 0, display: "flex", marginLeft: "auto" }}>
+          <Tooltip
+            title="Download the latest English Source reference and Translation data"
+            placement="bottom-start"
+          >
+            {/* wrap in span so MUI doesn't complain about disabled Button under Tooltip */}
+            <span>
+              <Button
+                color="secondary"
+                variant="contained"
+                onClick={() => downloadLatest()}
+                disabled={disableSaveButton || isBusy || disabledSourceButton}
+                sx={{
+                  marginLeft: "auto",
+                  marginRight: "1rem",
+                  flexShrink: "0",
+                  display: "block",
+                }}
+              >
+                Sources...
+              </Button>
+            </span>
+          </Tooltip>
+
+          <Button
+            color="secondary"
+            variant="contained"
+            sx={{ marginLeft: "auto", flexShrink: "0", display: "block" }}
+            disabled={disableSaveButton || isBusy}
+            onClick={() => onSave()}
+          >
+            Save File...
+          </Button>
+        </Box>
       </Toolbar>
     </AppBar>
   );
@@ -106,4 +161,7 @@ ICAppBar.propTypes = {
   includeLanguageSelector: PropTypes.bool,
   onSave: PropTypes.func,
   disableSaveButton: PropTypes.bool,
+  onDownloadLatest: PropTypes.func,
+  isBusy: PropTypes.bool,
+  disabledSourceButton: PropTypes.bool,
 };

@@ -7,6 +7,7 @@ import ToastMessage from "../components/ToastMessage";
 import DragDropDiv from "../components/DragDropDiv";
 import ICAppBar from "../components/ICAppBar";
 import DialogBox from "../components/DialogBox";
+import DownloadSourcesDialog from "../components/DownloadSourcesDialog";
 //core
 import { createTranslatorTheme } from "../utils/core";
 //react
@@ -20,12 +21,15 @@ export default function CommonLayout({
   treeViewList,
   handleItemSelectionToggle,
   projectTitle,
-  dropMessage = "Drag and drop the file here to open it.",
+  dropMessage = "Drag and drop a file here to import it.",
   dropDisabled = false,
   onSave,
   includeLanguageSelector = false,
   language,
   onSetLanguage,
+  onDownloadLatest,
+  isBusy,
+	disabledSourceButton,
   children,
 }) {
   //item selected in the tree view
@@ -37,6 +41,12 @@ export default function CommonLayout({
     setSelectedItems([]);
   };
   CommonLayout.SelectTreeNone = selectTreeNone;
+
+  function onShowDownloadSourcesDialog() {
+    DownloadSourcesDialog.ShowDialog((orders) => {
+      onDownloadLatest(orders);
+    });
+  }
 
   return (
     <ThemeProvider theme={darkTheme}>
@@ -50,6 +60,9 @@ export default function CommonLayout({
           onSave={() => onSave()}
           language={language}
           onSetLanguage={onSetLanguage}
+          onDownloadLatest={onShowDownloadSourcesDialog}
+          isBusy={isBusy}
+          disabledSourceButton={disabledSourceButton}
         />
 
         <Drawer
@@ -109,6 +122,7 @@ export default function CommonLayout({
 
       <ToastMessage />
       <DialogBox />
+      <DownloadSourcesDialog />
     </ThemeProvider>
   );
 }
@@ -126,5 +140,8 @@ CommonLayout.propTypes = {
   dropMessage: PropTypes.string,
   onSave: PropTypes.func,
   onSetLanguage: PropTypes.func,
+  onDownloadLatest: PropTypes.func,
+  isBusy: PropTypes.bool,
+	disabledSourceButton:PropTypes.bool,
   children: PropTypes.oneOfType([PropTypes.object, PropTypes.array]),
 };

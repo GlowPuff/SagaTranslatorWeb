@@ -9,7 +9,7 @@ function DragDropDiv({
 }) {
   const [isDragOver, setIsDragOver] = useState(false);
   const readerRef = useRef(null); // useRef to hold FileReader instance
-  const defaultMessage = "Drag and drop the file here to open it.";
+  const defaultMessage = "Drag and drop a file here to import it.";
 
   const handleDragOver = (event) => {
     event.preventDefault(); // Prevent default behavior (opening the file)
