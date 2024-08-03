@@ -36,8 +36,7 @@
 .appBarLanguageDiv {
   display: flex;
   align-items: center;
-  width: 100%;
-  margin-left: 1rem;
+  margin-left: auto;
 }
 
 .missionDialogPanels {

@@ -76,45 +76,45 @@ export default function ICAppBar({
           {title}
         </Typography>
 
-        {includeLanguageSelector && (
-          <div
-            className={
-              "appBarLanguageDiv " + (isBusy ? "missionDialogDisabled" : "")
-            }
-            style={{ marginRight: "1rem" }}
-          >
-            <Typography
-              variant="subtitle2"
-              component="div"
-              noWrap
-              style={{ marginLeft: "auto" }}
-            >
-              {barText}
-            </Typography>
-
+        <Box sx={{ flexGrow: 0, display: "flex", marginLeft: "auto", alignItems:"center" }}>
+          {includeLanguageSelector && (
             <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                marginLeft: "auto",
-              }}
+              className={
+                "appBarLanguageDiv " + (isBusy ? "missionDialogDisabled" : "")
+              }
+              style={{ marginRight: "1rem" }}
             >
-              <FormLabel sx={{ marginRight: "1rem", color: "white" }}>
-                Target Language:
-              </FormLabel>
-              <Select
-                value={language}
-                onChange={handleChange}
-                displayEmpty
-                sx={{ minWidth: "200px", marginLeft: "auto" }}
+              <Typography
+                variant="subtitle2"
+                component="div"
+                noWrap
+                style={{ marginLeft: "auto" }}
               >
-                {getLanguages()}
-              </Select>
-            </div>
-          </div>
-        )}
+                {barText}
+              </Typography>
 
-        <Box sx={{ flexGrow: 0, display: "flex", marginLeft: "auto" }}>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  marginLeft: "auto",
+                }}
+              >
+                <FormLabel sx={{ marginRight: "1rem", color: "white" }}>
+                  Target Language:
+                </FormLabel>
+                <Select
+                  value={language}
+                  onChange={handleChange}
+                  displayEmpty
+                  sx={{ minWidth: "200px", marginLeft: "auto" }}
+                >
+                  {getLanguages()}
+                </Select>
+              </div>
+            </div>
+          )}
+
           <Tooltip
             title="Download the latest English Source reference and Translation data"
             placement="bottom-start"
