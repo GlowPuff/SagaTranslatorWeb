@@ -506,7 +506,8 @@ async function downloadSource(
       (customFilename || sources[dataType].filename)
   );
   if (!response.ok) {
-    throw new Error(`Fetch error: ${response.status}`);
+    if (response.status == "404") throw new Error("The data you requested doesn't exist.");
+    else throw new Error(`Fetch error: ${response.status}`);
   }
 
   let json = await response.text();

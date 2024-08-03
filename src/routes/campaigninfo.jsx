@@ -139,9 +139,10 @@ export default function CampaignInfo() {
       ToastMessage.showToast("Successfully downloaded the requested data.");
     } catch (error) {
       console.log("🚀 ~ onDownloadLatest ~ error:", error);
-      DialogBox.ShowGenericDialog(
+      DialogBox.ShowGenericError(
         "Downloading Error",
-        "There was an error trying to download the requested data: " + error
+        "There was an error trying to download the requested data.",
+        error.message
       );
     } finally {
       setBusy(false);

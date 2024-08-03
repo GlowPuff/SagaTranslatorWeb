@@ -7,6 +7,7 @@ import ListItemText from "@mui/material/ListItemText";
 import List from "@mui/material/List";
 import ListItem from "@mui/material/ListItem";
 import { useState } from "react";
+import { Typography } from "@mui/material";
 
 export default function DialogBox() {
   const [open, setOpen] = useState(false);
@@ -131,6 +132,21 @@ export default function DialogBox() {
     setOpen(true);
   };
   DialogBox.ReportMissionErrors = reportMissionErrors;
+
+  const showGenericError = (dialogTitle, message, error) => {
+    setDialogContent(
+      <>
+        <DialogTitle>{dialogTitle}</DialogTitle>
+        <DialogContent>
+          <Typography>{message}</Typography>
+          <Typography color={"orange"}>{error}</Typography>
+        </DialogContent>
+      </>
+    );
+
+    setOpen(true);
+  };
+  DialogBox.ShowGenericError = showGenericError;
 
   return (
     <Dialog open={open} maxWidth={"sm"} fullWidth={true} scroll={"paper"}>

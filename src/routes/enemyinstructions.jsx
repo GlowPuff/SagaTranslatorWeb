@@ -24,9 +24,10 @@ try {
   //console.log("🚀 ~ sourceDataTreeList:", sourceDataTreeList);
 } catch (error) {
   //console.error("JSON repair error: ", error);
-  DialogBox.ShowGenericDialog(
+  DialogBox.ShowGenericError(
     "JSON Repair Error",
-    "There was an error when repairing the JSON data: " + error
+    "There was an error when repairing the JSON data.",
+    error.message
   );
 }
 
@@ -127,9 +128,10 @@ export default function EnemyInstructions() {
       ToastMessage.showToast("Successfully downloaded the requested data.");
     } catch (error) {
       console.log("🚀 ~ onDownloadLatest ~ error:", error);
-      DialogBox.ShowGenericDialog(
+      DialogBox.ShowGenericError(
         "Downloading Error",
-        "There was an error trying to download the requested data: " + error
+        "There was an error trying to download the requested data.",
+        error.message
       );
     } finally {
       setBusy(false);

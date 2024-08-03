@@ -26,10 +26,12 @@ let enemyData, villainData;
 try {
   enemyData = JSON.parse(jsonrepair(enemyDataRaw));
   villainData = JSON.parse(jsonrepair(villainDataRaw));
-} catch (err) {
-  DialogBox.ShowGenericDialog(
+} catch (error) {
+  console.log("🚀 ~ error:", error)
+  DialogBox.ShowGenericError(
     "JSON Repair Error",
-    "There was an error when repairing the JSON data: " + err
+    "There was an error when repairing the JSON data.",
+    error.message
   );
 }
 
@@ -144,9 +146,10 @@ export default function BonusEffects() {
       ToastMessage.showToast("Successfully downloaded the requested data.");
     } catch (error) {
       console.log("🚀 ~ onDownloadLatest ~ error:", error);
-      DialogBox.ShowGenericDialog(
+      DialogBox.ShowGenericError(
         "Downloading Error",
-        "There was an error trying to download the requested data: " + error
+        "There was an error trying to download the requested data.",
+        error.message
       );
     } finally {
       setBusy(false);
