@@ -47,6 +47,8 @@ export default function CampaignInfo() {
     Lothal: sourceTree[6].data,
   });
 
+  const dropMessage = "Select the Expansion for the data you want to import.";
+
   let keyNames = [
     "Core",
     "Twin",
@@ -100,6 +102,8 @@ export default function CampaignInfo() {
     });
     CommonLayout.SelectTreeNone();
     setSelectedIndex(-1);
+    setDisableSaveButton(true);
+    setSelectedKey("");
 
     try {
       let promises = [];
@@ -173,6 +177,7 @@ export default function CampaignInfo() {
       treeViewList={sourceTree}
       handleItemSelectionToggle={handleItemSelectionToggle}
       projectTitle={`CAMPAIGN INFO - ${selectedSourceItem.label}`}
+      dropMessage={dropMessage}
       dropDisabled={selectedKey === ""}
       onSave={() =>
         saveFile(

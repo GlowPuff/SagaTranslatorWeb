@@ -53,16 +53,14 @@ export default function DeploymentCard() {
   const [disableSaveButton, setDisableSaveButton] = useState(true);
   const [exportFilename, setExportFilename] = useState("");
   const [dropDisabled, setDropDisabled] = useState(true);
-  const [dropMessage, setDropMessage] = useState(
-    "Select a group type for the data you want to import."
-  );
   const [projectTitle, setProjectTitle] = useState("");
   const [busy, setBusy] = useState(false);
+
+	const dropMessage = "Select a group type for the data you want to import.";
 
   const handleItemSelectionToggle = (event, itemId, isSelected) => {
     //process root tree item (group data set: allies, enemies, etc)
     if (isSelected && Number.parseInt(itemId) < 4) {
-      setDropMessage("Select a ");
       selectedTreeIndex = itemId;
       setDisableSaveButton(false);
       setDropDisabled(false);
@@ -76,7 +74,6 @@ export default function DeploymentCard() {
 
     //process selected group
     if (isSelected && Number.parseInt(itemId) > 3) {
-      setDropMessage("Drag and drop the file here to open it.");
       setDisableSaveButton(false);
       setDropDisabled(false);
 
