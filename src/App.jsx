@@ -91,7 +91,17 @@ function App() {
         }}
       >
         Choose which data set you&apos;d like to translate or continue your work
-        from.
+        from.{" "}
+        <span style={{ color: "orange" }}>
+          Report any issues{" "}
+          <a
+            style={{ color: "red" }}
+            href="https://github.com/GlowPuff/SagaTranslatorWeb/issues"
+          >
+            here
+          </a>
+          .
+        </span>
       </Alert>
 
       <MissionChooserDialog />

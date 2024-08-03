@@ -61,10 +61,15 @@ export default function MissionEntity({
         }}
       />
 
-      {entityItem.buttonList === undefined && (
-        <Typography variant="p" sx={{ color: "#6dcaf2" }}>
-          This item should not be undefined. Please contact me through GitHub
-          about this issue.
+      {entityItem.buttonList === undefined && !disabled && (
+        <Typography variant="p" sx={{ color: "orange" }}>
+          This item should not be undefined. Please{" "}
+          <a
+            style={{ color: "red" }}
+            href="https://github.com/GlowPuff/SagaTranslatorWeb/issues"
+          >
+            report this issue.
+          </a>
         </Typography>
       )}
 
