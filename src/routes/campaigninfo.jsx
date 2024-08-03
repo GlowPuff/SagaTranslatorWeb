@@ -47,6 +47,16 @@ export default function CampaignInfo() {
     Lothal: sourceTree[6].data,
   });
 
+  let keyNames = [
+    "Core",
+    "Twin",
+    "Bespin",
+    "Empire",
+    "Hoth",
+    "Jabba",
+    "Lothal",
+  ];
+
   const handleItemSelectionToggle = (event, itemId, isSelected) => {
     if (isSelected) {
       setSelectedIndex(itemId);
@@ -83,57 +93,63 @@ export default function CampaignInfo() {
   async function doWork({ language, task }) {
     setBusy(true);
 
+    //setSelectedKey("");
+    setSelectedSourceItem({
+      data: "",
+      label: "None",
+    });
+    CommonLayout.SelectTreeNone();
+    setSelectedIndex(-1);
+
     try {
       let promises = [];
       if (task.getSource) {
-        promises.push(
-          new Promise((resolve) => {
-            resolve(
-              downloadSource(
-                "campaigninfo",
-                "English (EN)",
-                false,
-                sourceTree[selectedIndex].filename
-              )
-            );
-          })
-        );
+        for (let index = 0; index < 7; index++) {
+          promises.push(
+            new Promise((resolve) => {
+              resolve(
+                downloadSource(
+                  "campaigninfo",
+                  "English (EN)",
+                  false,
+                  sourceTree[index].filename
+                )
+              );
+            })
+          );
+        }
       }
 
       if (task.getTranslation) {
-        promises.push(
-          new Promise((resolve) => {
-            resolve(
-              downloadSource(
-                "campaigninfo",
-                language,
-                false,
-                sourceTree[selectedIndex].filename
-              )
-            );
-          })
-        );
+        for (let index = 0; index < 7; index++) {
+          promises.push(
+            new Promise((resolve) => {
+              resolve(
+                downloadSource(
+                  "campaigninfo",
+                  language,
+                  false,
+                  sourceTree[index].filename
+                )
+              );
+            })
+          );
+        }
       }
 
       let promise = await Promise.all(promises);
 
       if (task.getSource && !task.getTranslation) {
-        setSelectedSourceItem({
-          ...sourceTree[selectedIndex],
-          data: promise[0],
-          rnd: Math.random().toString(),
-        });
-        sourceTree[selectedIndex].data = promise[0];
+        for (let index = 0; index < 7; index++) {
+          sourceTree[index].data = promise[index];
+        }
       } else if (task.getSource && task.getTranslation) {
-        setSelectedSourceItem({
-          ...sourceTree[selectedIndex],
-          data: promise[0],
-        });
-        sourceTree[selectedIndex].data = promise[0];
-        setExportedData({
-          ...exportedData,
-          [selectedKey]: promise[1],
-        });
+        let exported = {};
+        for (let index = 0; index < 7; index++) {
+          sourceTree[index].data = promise[index];
+          exported[keyNames[index]] = promise[index + 7];
+        }
+        setExportedData(exported);
       }
 
       ToastMessage.showToast("Successfully downloaded the requested data.");
@@ -159,8 +175,12 @@ export default function CampaignInfo() {
       projectTitle={`CAMPAIGN INFO - ${selectedSourceItem.label}`}
       dropDisabled={selectedKey === ""}
       onSave={() =>
-        saveFile(exportedData[selectedKey], selectedSourceItem.filename, (m) =>
-          ToastMessage.showToast(m)
+        saveFile(
+          exportedData[selectedKey],
+          selectedSourceItem.filename,
+          (m) => {
+            return ToastMessage.showToast(m);
+          }
         )
       }
       drawerWidth={340}
