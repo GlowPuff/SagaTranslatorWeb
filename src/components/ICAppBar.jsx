@@ -40,6 +40,7 @@ export default function ICAppBar({
       "Magyar (HU)",
       "Norwegian (NO)",
       "Russian (RU)",
+      "Dutch (NL)",
     ];
     return languages.map((item, index) => (
       <MenuItem key={index} value={item}>
@@ -76,7 +77,14 @@ export default function ICAppBar({
           {title}
         </Typography>
 
-        <Box sx={{ flexGrow: 0, display: "flex", marginLeft: "auto", alignItems:"center" }}>
+        <Box
+          sx={{
+            flexGrow: 0,
+            display: "flex",
+            marginLeft: "auto",
+            alignItems: "center",
+          }}
+        >
           {includeLanguageSelector && (
             <div
               className={
