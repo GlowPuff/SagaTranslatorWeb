@@ -51,6 +51,7 @@ export default function DownloadSourcesDialog() {
       "Norwegian (NO)",
       "Russian (RU)",
       "Dutch (NL)",
+      "Portuguese (PT)"
     ];
     return languages.map((item, index) => (
       <MenuItem key={index} value={item}>
