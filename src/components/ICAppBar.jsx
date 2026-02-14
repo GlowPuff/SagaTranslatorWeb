@@ -41,7 +41,7 @@ export default function ICAppBar({
       "Norwegian (NO)",
       "Russian (RU)",
       "Dutch (NL)",
-			"Portuguese (PT)",
+			"Portuguese (BR)",
     ];
     return languages.map((item, index) => (
       <MenuItem key={index} value={item}>
